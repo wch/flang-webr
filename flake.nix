@@ -34,7 +34,7 @@
             };
           });
 
-    in rec {
+    in {
       packages = forAllSystems ({ pkgs, pkgs-emscripten, flang-source, ... }: {
         default = pkgs.stdenv.mkDerivation {
           name = "flang-webr";
@@ -86,7 +86,7 @@
         default = pkgs.mkShell {
 
           # Get the nativeBuildInputs from packages.default
-          inputsFrom = [ packages.${system}.default ];
+          inputsFrom = [ self.packages.${system}.default ];
 
           # Any additional Nix packages provided in the environment
           packages = with pkgs; [
