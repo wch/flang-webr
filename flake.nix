@@ -11,12 +11,8 @@
 
   outputs = { self, nixpkgs, nixpkgs-emscripten }:
     let
-      allSystems = [
-        "x86_64-linux"
-        "aarch64-linux"
-        "x86_64-darwin"
-        "aarch64-darwin"
-      ];
+      allSystems =
+        [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
 
       # Helper to provide system-specific attributes
       forAllSystems = f:
@@ -42,21 +38,22 @@
 
           nativeBuildInputs = with pkgs; [
             git
-            cacert  # Needed for git clone to work on https repos
+            cacert # Needed for git clone to work on https repos
             cmake
             zlib
             libxml2
             python3
-            pkgs-emscripten.emscripten
           ];
+
+          propagatedNativeBuildInputs = [ pkgs-emscripten.emscripten ];
 
           # It would be faster to do an ln -s instead of cp -R, but I think the
           # cmake configure step tries to write to that directory, so it fails.
-          postUnpack = ''
-            # ln -s ${flang-source} $sourceRoot/f18-llvm-project
-            cp -R ${flang-source} $sourceRoot/f18-llvm-project
-            chmod -R u+w $sourceRoot/f18-llvm-project
-          '';
+          # postUnpack = ''
+          #   # ln -s ${flang-source} $sourceRoot/f18-llvm-project
+          #   cp -R ${flang-source} $sourceRoot/f18-llvm-project
+          #   chmod -R u+w $sourceRoot/f18-llvm-project
+          # '';
 
           # The automatic configuration by stdenv.mkDerivation tries to do some
           # cmake configuration, which causes the build to fail.
@@ -70,13 +67,13 @@
             export EM_CACHE=$(pwd)/.emscripten_cache-${pkgs-emscripten.emscripten.version}
             echo emscripten cache dir: $EM_CACHE
 
-            make WEBR_ROOT=webr NUM_CORES=$NIX_BUILD_CORES
+            # make WEBR_ROOT=webr NUM_CORES=$NIX_BUILD_CORES
           '';
 
           installPhase = ''
-            make WEBR_ROOT=webr install
-            mkdir -p $out
-            cp -r webr $out
+            # make WEBR_ROOT=webr install
+            # mkdir -p $out
+            # cp -r webr $out
           '';
         };
       });
@@ -89,8 +86,7 @@
           inputsFrom = [ self.packages.${system}.default ];
 
           # Any additional Nix packages provided in the environment
-          packages = with pkgs; [
-          ];
+          packages = with pkgs; [ ];
 
           # This is a workaround for nix emscripten cache directory not being
           # writable. Borrowed from:
