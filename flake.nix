@@ -35,7 +35,7 @@
           });
 
     in rec {
-      packages = forAllSystems ({ pkgs, pkgs-emscripten, system, flang-source }: {
+      packages = forAllSystems ({ pkgs, pkgs-emscripten, flang-source, ... }: {
         default = pkgs.stdenv.mkDerivation {
           name = "flang-webr";
           src = ./.;
@@ -82,7 +82,7 @@
       });
 
       # Development environment output
-      devShells = forAllSystems ({ pkgs, pkgs-emscripten, system, flang-source }: {
+      devShells = forAllSystems ({ pkgs, pkgs-emscripten, system, ... }: {
         default = pkgs.mkShell {
 
           # Get the nativeBuildInputs from packages.default
