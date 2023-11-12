@@ -26,7 +26,7 @@
             pkgs-emscripten = import nixpkgs-emscripten { inherit system; };
             inherit system;
 
-            llvm-source = nixpkgs.legacyPackages.${system}.fetchgit {
+            flang-source = nixpkgs.legacyPackages.${system}.fetchgit {
               url = "https://github.com/lionel-/f18-llvm-project";
               # This is the tip of the fix-webr branch.
               rev = "800f6764698d171beb00037aac6f570ab8c317d3";
@@ -35,7 +35,7 @@
           });
 
     in rec {
-      packages = forAllSystems ({ pkgs, pkgs-emscripten, system, llvm-source }: {
+      packages = forAllSystems ({ pkgs, pkgs-emscripten, system, flang-source }: {
         default = pkgs.stdenv.mkDerivation {
           name = "flang-webr";
           src = ./.;
@@ -53,8 +53,8 @@
           # It would be faster to do an ln -s instead of cp -R, but I think the
           # cmake configure step tries to write to that directory, so it fails.
           postUnpack = ''
-            # ln -s ${llvm-source} $sourceRoot/f18-llvm-project
-            cp -R ${llvm-source} $sourceRoot/f18-llvm-project
+            # ln -s ${flang-source} $sourceRoot/f18-llvm-project
+            cp -R ${flang-source} $sourceRoot/f18-llvm-project
             chmod -R u+w $sourceRoot/f18-llvm-project
           '';
 
@@ -82,7 +82,7 @@
       });
 
       # Development environment output
-      devShells = forAllSystems ({ pkgs, pkgs-emscripten, system, llvm-source }: {
+      devShells = forAllSystems ({ pkgs, pkgs-emscripten, system, flang-source }: {
         default = pkgs.mkShell {
 
           # Get the nativeBuildInputs from packages.default
