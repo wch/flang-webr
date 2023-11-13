@@ -65,7 +65,7 @@ install: $(FLANG_BIN) $(RUNTIME_WASM_LIB)
 	mkdir -p $(HOST)/bin $(WASM)/lib
 	cp $(FLANG_BIN) $(HOST)/bin
 	cp $(RUNTIME_WASM_LIB) $(WASM)/lib
-	sed -e "s|@BIN_PATH@|$(HOST)/bin|" emfc.in > $(HOST)/bin/emfc
+	cp emfc $(HOST)/bin
 	chmod +x $(HOST)/bin/emfc
 
 .PHONY: check

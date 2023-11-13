@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -eu
 
-BIN_PATH=@BIN_PATH@
+BIN_PATH=$(dirname "$0")
 BBC=${BIN_PATH}/bbc
 TCO=${BIN_PATH}/tco
 LLC=${BIN_PATH}/llc
