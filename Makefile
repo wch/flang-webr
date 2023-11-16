@@ -31,7 +31,7 @@ $(FLANG_BIN): $(SOURCE)
 	CMAKE_BUILD_PARALLEL_LEVEL=$(NUM_CORES) cmake ../f18-llvm-project/llvm \
 	  $(WEBR_LLVM_CMAKE_VARS) \
 	  -DCMAKE_INSTALL_PREFIX:PATH=$(HOST) \
-	  -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+	  -DCMAKE_BUILD_TYPE=MinSizeRel \
 	  -DLLVM_TARGETS_TO_BUILD="host;WebAssembly" \
 	  -DLLVM_ENABLE_PROJECTS="clang;flang;mlir" \
 	  -DCMAKE_CXX_STANDARD=17 \
