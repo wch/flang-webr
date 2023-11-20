@@ -1,77 +1,70 @@
-WEBR_ROOT = $(abspath ../..)
 ROOT = $(abspath .)
-
 BUILD = $(ROOT)/build
-SOURCE = $(ROOT)/f18-llvm-project
+SOURCE = $(ROOT)/llvm-project
+PREFIX = $(ROOT)
 
-TOOLS = $(WEBR_ROOT)/tools
-HOST = $(WEBR_ROOT)/host
-WASM = $(WEBR_ROOT)/wasm
+HOST = $(PREFIX)/host
+WASM = $(PREFIX)/wasm
 
-FLANG_BIN = $(BUILD)/bin/tco $(BUILD)/bin/bbc $(BUILD)/bin/llc
-RUNTIME_WASM_LIB = $(BUILD)/webr/libFortranRuntime.a
+FLANG_BIN = $(BUILD)/bin/flang-new
 
-# Configure your local environment in this file. The LLVM build can
-# be configured via `WEBR_LLVM_CMAKE_VARS. See https://llvm.org/docs/CMake.html
--include ~/.webr-config.mk
+RUNTIME_SOURCES := $(wildcard $(SOURCE)/flang/runtime/*.cpp)
+RUNTIME_SOURCES += $(SOURCE)/flang/lib/Decimal/decimal-to-binary.cpp
+RUNTIME_SOURCES += $(SOURCE)/flang/lib/Decimal/binary-to-decimal.cpp
+RUNTIME_OBJECTS = $(patsubst $(SOURCE)/%,$(BUILD)/%,$(RUNTIME_SOURCES:.cpp=.o))
+RUNTIME_LIB = $(BUILD)/flang/runtime/libFortranRuntime.a
 
-NUM_CORES ?= 4
-
+FLANG_WASM_CMAKE_VARS := $(FLANG_WASM_CMAKE_VARS)
 
 .PHONY: all
-all: $(FLANG_BIN) $(RUNTIME_WASM_LIB)
-
+all: $(FLANG_BIN) $(RUNTIME_LIB)
 
 $(SOURCE):
-	git clone --single-branch -b fix-webr --depth=1 https://github.com/lionel-/f18-llvm-project
+	git clone --single-branch -b webr --depth=1 https://github.com/georgestagg/llvm-project
 
 $(FLANG_BIN): $(SOURCE)
-	mkdir -p $(BUILD) && \
-	cd $(BUILD) && \
-	CMAKE_BUILD_PARALLEL_LEVEL=$(NUM_CORES) cmake ../f18-llvm-project/llvm \
-	  $(WEBR_LLVM_CMAKE_VARS) \
-	  -DCMAKE_INSTALL_PREFIX:PATH=$(HOST) \
+	@mkdir -p $(BUILD)
+	cmake -G Ninja -S $(SOURCE)/llvm -B $(BUILD) \
+	  -DCMAKE_INSTALL_PREFIX=$(HOST) \
 	  -DCMAKE_BUILD_TYPE=MinSizeRel \
-	  -DLLVM_TARGETS_TO_BUILD="host;WebAssembly" \
+	  -DLLVM_DEFAULT_TARGET_TRIPLE="wasm32-unknown-emscripten" \
+	  -DLLVM_TARGETS_TO_BUILD="WebAssembly" \
 	  -DLLVM_ENABLE_PROJECTS="clang;flang;mlir" \
-	  -DCMAKE_CXX_STANDARD=17 \
-	  -DLLVM_BUILD_TOOLS=On \
-	  -DLLVM_INSTALL_UTILS=On && \
-	make -j$(NUM_CORES)
-
+	  $(FLANG_WASM_CMAKE_VARS)
+	TERM=dumb cmake --build $(BUILD)
 
 .PHONY: wasm-runtime
-wasm-runtime: $(FLANG_BIN) $(RUNTIME_WASM_LIB)
-
-RUNTIME_CFLAGS := $(RUNTIME_CFLAGS)
-RUNTIME_CFLAGS += -I$(BUILD)/include -I$(BUILD)/tools/flang/runtime
-RUNTIME_CFLAGS += -I$(SOURCE)/flang/include -I$(SOURCE)/llvm/include
-RUNTIME_CFLAGS += -DFLANG_LITTLE_ENDIAN -fPIC
-RUNTIME_CFLAGS += -fvisibility=hidden
+wasm-runtime: $(FLANG_BIN) $(RUNTIME_LIB)
 
 RUNTIME_CXXFLAGS := $(RUNTIME_CXXFLAGS)
-RUNTIME_CXXFLAGS += $(RUNTIME_CFLAGS) -std=c++17 -Wno-c++11-narrowing
+RUNTIME_CXXFLAGS += -I$(BUILD)/include -I$(BUILD)/tools/flang/runtime
+RUNTIME_CXXFLAGS += -I$(SOURCE)/flang/include -I$(SOURCE)/llvm/include
+RUNTIME_CXXFLAGS += -DFLANG_LITTLE_ENDIAN
+RUNTIME_CXXFLAGS += -fPIC -Wno-c++11-narrowing -fvisibility=hidden
+RUNTIME_CXXFLAGS += -DFE_UNDERFLOW=0 -DFE_OVERFLOW=0 -DFE_INEXACT=0
+RUNTIME_CXXFLAGS += -DFE_INVALID=0 -DFE_DIVBYZERO=0 -DFE_ALL_EXCEPT=0
 
-$(RUNTIME_WASM_LIB): missing-math.c
-	CFLAGS="$(RUNTIME_CFLAGS)" \
-	  CXXFLAGS="$(RUNTIME_CXXFLAGS)" \
-	  BUILD="$(BUILD)" \
-	  SOURCE="$(SOURCE)" \
-	  ROOT="$(ROOT)" \
-	  ./build-runtime.sh
+$(RUNTIME_LIB): $(RUNTIME_OBJECTS)
+	@rm -f $@
+	emar -rcs $@ $^
+
+$(BUILD)%.o : $(SOURCE)%.cpp
+	@mkdir -p $(@D)
+	em++ $(RUNTIME_CXXFLAGS) -o $@ -c $<
 
 .PHONY: install
-install: $(FLANG_BIN) $(RUNTIME_WASM_LIB)
-	mkdir -p $(HOST)/bin $(WASM)/lib
-	cp $(FLANG_BIN) $(HOST)/bin
-	cp $(RUNTIME_WASM_LIB) $(WASM)/lib
-	cp emfc $(HOST)/bin
-	chmod +x $(HOST)/bin/emfc
+install: $(FLANG_BIN) $(RUNTIME_LIB)
+	install -D -t $(HOST)/bin -m 755 $(FLANG_BIN)
+	install -D -t $(WASM)/lib -m 644 $(RUNTIME_LIB)
 
 .PHONY: check
 check:
-	cd $(BUILD) && $(MAKE) check-flang
+	cmake --build $(BUILD) --target check-all
 
 .PHONY: clean
 clean:
 	cmake --build $(BUILD) --target clean
+
+.PHONY: clean-all
+clean-all:
+	rm -rf $(SOURCE) $(BUILD)

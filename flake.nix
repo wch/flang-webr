@@ -23,10 +23,10 @@
             inherit system;
 
             flang-source = nixpkgs.legacyPackages.${system}.fetchgit {
-              url = "https://github.com/lionel-/f18-llvm-project";
-              # This is the tip of the fix-webr branch.
-              rev = "800f6764698d171beb00037aac6f570ab8c317d3";
-              hash = "sha256-t5nLm58sBDSVxf4U+PFfwB8Caz7ra872QxiCaqqWaOw=";
+              url = "https://github.com/georgestagg/llvm-project";
+              # This is the tip of the webr branch.
+              rev = "dc88038cde2f2b1224d821e21e24b922a882412b";
+              hash = "sha256-yNSXOM97pk6bE68oLJMz/QqhMmFDZ7iv5WnXAf9f6R8=";
             };
           });
 
@@ -43,17 +43,10 @@
             zlib
             libxml2
             python3
+            ninja
           ];
 
           propagatedNativeBuildInputs = [ pkgs-emscripten.emscripten ];
-
-          # It would be faster to do an ln -s instead of cp -R, but I think the
-          # cmake configure step tries to write to that directory, so it fails.
-          postUnpack = ''
-            # ln -s ${flang-source} $sourceRoot/f18-llvm-project
-            cp -R ${flang-source} $sourceRoot/f18-llvm-project
-            chmod -R u+w $sourceRoot/f18-llvm-project
-          '';
 
           # The automatic configuration by stdenv.mkDerivation tries to do some
           # cmake configuration, which causes the build to fail.
@@ -67,13 +60,11 @@
             export EM_CACHE=$(pwd)/.emscripten_cache-${pkgs-emscripten.emscripten.version}
             echo emscripten cache dir: $EM_CACHE
 
-            make WEBR_ROOT=webr NUM_CORES=$NIX_BUILD_CORES
+            CMAKE_BUILD_PARALLEL_LEVEL=$NIX_BUILD_CORES make SOURCE=${flang-source} PREFIX=$out
           '';
 
           installPhase = ''
-            make WEBR_ROOT=webr install
-            mkdir -p $out
-            cp -r webr $out
+            make SOURCE=${flang-source} PREFIX=$out install
           '';
         };
       });
