@@ -37,13 +37,15 @@
           src = ./.;
 
           nativeBuildInputs = with pkgs; [
-            git
             cacert # Needed for git clone to work on https repos
             cmake
-            zlib
+            git
             libxml2
-            python3
+            llvmPackages_16.bintools
+            llvmPackages_16.clang
             ninja
+            python3
+            zlib
           ];
 
           propagatedNativeBuildInputs = [ pkgs-emscripten.emscripten ];
