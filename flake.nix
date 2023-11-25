@@ -37,9 +37,7 @@
           src = ./.;
 
           nativeBuildInputs = with pkgs; [
-            cacert # Needed for git clone to work on https repos
             cmake
-            git
             libxml2
             llvmPackages_16.bintools
             llvmPackages_16.clang
