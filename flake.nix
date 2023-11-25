@@ -17,12 +17,12 @@
       # Helper to provide system-specific attributes
       forAllSystems = f:
         nixpkgs.lib.genAttrs allSystems (system:
-          f {
+          f rec {
             pkgs = import nixpkgs { inherit system; };
             pkgs-emscripten = import nixpkgs-emscripten { inherit system; };
             inherit system;
 
-            flang-source = nixpkgs.legacyPackages.${system}.fetchgit {
+            flang-source = pkgs.fetchgit {
               url = "https://github.com/georgestagg/llvm-project";
               # This is the tip of the webr branch.
               rev = "dc88038cde2f2b1224d821e21e24b922a882412b";
